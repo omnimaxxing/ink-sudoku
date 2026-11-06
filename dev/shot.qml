@@ -8,6 +8,8 @@ import "fixtures/session.js" as Session
 //
 // Ink Sudoku flags (before the app path; stub-side flags are in inksudoku.js):
 //   --chooser            open the New game list
+//   --number             …then write 4 8 2 1 3 7 in its Puzzle No. boxes (the stub reads them so)
+//   --number-play LEVEL  …then tap LEVEL to play that number
 //   --ink                write a 7 into r5c4 (the stub reads it as unknown: dotted)
 //   --ink-again          …then start another stroke there (the dotted read goes at once)
 //   --ink-many N         write N digits into empty cells, one per step
@@ -186,6 +188,15 @@ Window {
             s.push(() => { app.solvedOpen = false; });
         if (has("--chooser"))
             s.push(() => { app.chooserOpen = true; });
+        if (has("--number"))
+            for (let i = 0; i < 6; i++)
+                s.push(() => {
+                    const wr = find(app, "numberWriter"), B = app.numberBox;
+                    scribble(penTo(wr), Number("482137"[i]), (i + 0.5) * B, 0.5 * B, B * 0.6);
+                    wr.flush();
+                });
+        if (has("--number-play"))
+            s.push(() => app.newGame(args[args.indexOf("--number-play") + 1]));
         // Sudoku writes in r5c4; Kakuro in its first empty white cell.
         const inkCell = () => kakuro(app) ? emptyCells(app)[0] : 39;
         if (has("--ink"))

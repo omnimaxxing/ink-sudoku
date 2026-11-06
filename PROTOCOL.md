@@ -225,6 +225,8 @@ Decisions the Go side (`backend/cmd/sudoku`, `backend/game`) made where the abov
 - **`conflicts`** lists entered cells only (never givens) whose digit repeats in a peer, given or
   entered.
 - **`puzzle.number` = `seed`**, drawn from 1–999999. `newGame` also accepts an optional `"seed"`.
+  Since v5.2 new numbers use only the digits 1–9 (111111–999999), so any number can be written
+  back in: the recognizer has no 0. `engine/generate_test.go` pins numbers to their puzzles.
 - **`solved`** follows the `state`/`marks` reply of the change that completes the board.
   `mistakes` counts entries set to a digit that isn't the solution's; `hints` counts `hint`s
   answered with `reveal` true or absent (full hints shown); `hint` on a solved board replies
@@ -300,6 +302,19 @@ New messages; everything above still holds.
 | 109 | f→b | `calibrationStart` | `{}` → `calibration` (restarts the round count; keeps earlier samples) |
 | 110 | f→b | `calibrationInk` | `{"id": 9, "digit": 5, "size": 260, "strokes": [[x, y, t, p, …]]}` → `calibrationRead`. Strokes in box-local px; `size` is the square writing box's side |
 | 111 | f→b | `calibrationDone` | `{}` → `personalized`, then the normal `state` |
+
+**Play by number (v5.2).** The New game list has a "Puzzle No." row of six boxes; the player
+writes one digit per box, then taps a level.
+
+| Type | Dir | Name | Body |
+|---|---|---|---|
+| 10 | b→f | `inkRead` | `{"id": 1000003, "digit": 4}` — reply to `readInk`: the digit, 0 if the ink isn't one clear digit; `"scratch": true` for a scratch-out (clear the box) |
+| 113 | f→b | `readInk` | `{"id": 1000003, "size": 110, "strokes": [[x, y, t, p, …]]}` → `inkRead`, or `error` with the `id`. Strokes in box-local px. Read like game ink, with personalization, but never logged or learned. The frontend numbers these from 1000000 up so they never collide with game ink ids |
+
+- `newGame` `{"level": "hard", "number": 482137}` replays that puzzle. The number must be six
+  digits 1–9, else `error`. The game is marked `puzzle.byNumber: true` (persisted). It doesn't count
+  as played, can't set a best or extend a streak, and leaving it unsolved doesn't break a streak:
+  it may be a puzzle the player has solved before.
 
 Changes to existing messages:
 - `newGame` accepts `{"daily": true}`: today's puzzle (seed from the local date, level by weekday:

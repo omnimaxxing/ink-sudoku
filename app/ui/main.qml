@@ -26,6 +26,7 @@ Rectangle {
     readonly property int msgCalibration: 7
     readonly property int msgCalibrationRead: 8
     readonly property int msgPersonalized: 9
+    readonly property int msgInkRead: 10
     readonly property int msgPart: 50
     readonly property int msgHello: 100
     readonly property int msgNewGame: 101
@@ -38,6 +39,7 @@ Rectangle {
     readonly property int msgCalibrationInk: 110
     readonly property int msgCalibrationDone: 111
     readonly property int msgView: 112
+    readonly property int msgReadInk: 113
 
     readonly property real gridSize: 1180
     readonly property real margin: Math.round((width - gridSize) / 2)
@@ -106,6 +108,14 @@ Rectangle {
     property bool penStream: false
     property int selected: -1
     property bool chooserOpen: false
+    onChooserOpenChanged: clearNumber()
+
+    // Play by number: six digits written in the New game list, then a level.
+    readonly property real numberBox: 110
+    readonly property int numberIds: 1000000  // readInk ids, apart from the grid's ink ids
+    property var numberDigits: [0, 0, 0, 0, 0, 0]
+    property bool numberMissed: false   // the last box written couldn't be read
+    readonly property int writtenNumber: numberDigits.every(d => d > 0) ? Number(numberDigits.join("")) : 0
 
     AppLoad {
         id: endpoint
@@ -193,6 +203,10 @@ Rectangle {
                 calibration.onError(m);
                 return;
             }
+            if (m.id >= numberIds) {
+                numberRead({ id: m.id, digit: 0 });
+                return;
+            }
             if (m.id)
                 writer.settle(m.id);    // that ink wasn't taken: its live strokes go
             else
@@ -211,6 +225,8 @@ Rectangle {
             // the grid's clean refresh.
             settledUpdates = 0;
             refreshDue = false;
+        } else if (type === msgInkRead) {
+            numberRead(m);
         } else if (type === msgCalibration) {
             if (page === "teach")
                 calibration.onCalibration(m);
@@ -422,6 +438,16 @@ Rectangle {
             calibration.pen(e.k, b.x, b.y, p, ms);
             return;
         }
+        if (chooserOpen) {
+            const b = numberStrip.mapFromItem(root, e.sx, e.sy);
+            if (e.k === "down")
+                numberWriter.down(b.x, b.y, p, ms);
+            else if (e.k === "move")
+                numberWriter.move(b.x, b.y, p, ms);
+            else if (e.k === "up")
+                numberWriter.up();
+            return;
+        }
         const q = grid.mapFromItem(root, e.sx, e.sy);
         if (e.k === "down")
             writer.down(q.x, q.y, p, ms);
@@ -445,7 +471,34 @@ Rectangle {
         f();
     }
     function newGame(level) {
-        act(() => send(msgNewGame, { level: level }));
+        const n = writtenNumber;    // act closes the list, which clears the number
+        act(() => send(msgNewGame, n ? { level: level, number: n } : { level: level }));
+    }
+    function clearNumber() {
+        numberWriter.reset();
+        numberDigits = [0, 0, 0, 0, 0, 0];
+        numberMissed = false;
+    }
+    // `inkRead` for a number box: show the digit typeset, or clear the box.
+    function numberRead(m) {
+        const g = numberWriter.settle(m.id - numberIds);
+        if (!g)
+            return;
+        const d = numberDigits.slice();
+        if (m.scratch)
+            d[g.cell] = 0;
+        else if (m.digit > 0)
+            d[g.cell] = m.digit;
+        numberMissed = !m.scratch && !(m.digit > 0);
+        numberDigits = d;
+        numberQuiet.run();
+    }
+    function numberNote() {
+        if (numberMissed)
+            return "write that one again";
+        if (writtenNumber)
+            return "now tap a level";
+        return numberDigits.some(d => d > 0) ? "" : "to replay a puzzle";
     }
     function newDaily() {
         act(() => send(msgNewGame, { daily: true }));
@@ -555,6 +608,8 @@ Rectangle {
 
     // The quiet line beside each chooser entry.
     function levelNote(level) {
+        if (writtenNumber)
+            return "No. " + grouped(writtenNumber);
         const st = stats[level] || {};
         const parts = [];
         if (st.bestMs > 0)
@@ -813,6 +868,7 @@ Rectangle {
         info: root.solvedInfo
         level: root.puzzle ? root.puzzle.level : ""
         daily: root.puzzle !== null && !!root.puzzle.daily
+        byNumber: root.puzzle && root.puzzle.byNumber ? root.puzzle.number : 0
         offerToday: !(root.puzzle && root.puzzle.daily === root.today())
         onNewGame: root.chooserOpen = true
         onToday: root.newDaily()
@@ -875,6 +931,107 @@ Rectangle {
                     note: root.levelNote(modelData)
                     current: root.puzzle !== null && !root.puzzle.daily && root.puzzle.level === modelData
                     onTap: root.newGame(modelData)
+                }
+            }
+            Item {
+                id: numberRow
+                width: parent.width
+                height: root.numberBox + 24
+                Text {
+                    id: numberLabel
+                    anchors.baseline: numberStrip.bottom
+                    anchors.baselineOffset: -32
+                    text: "Puzzle No."
+                    font.family: "EB Garamond"
+                    font.pixelSize: 42
+                    color: "black"
+                }
+                Item {
+                    id: numberStrip
+                    x: numberLabel.implicitWidth + 28
+                    y: 12
+                    width: 6 * root.numberBox
+                    height: root.numberBox
+                    Repeater {
+                        model: 6
+                        Rectangle {
+                            required property int index
+                            x: index * root.numberBox
+                            width: root.numberBox + 2
+                            height: root.numberBox
+                            color: "white"
+                            border.width: 2
+                            border.color: "black"
+                            Text {
+                                anchors.centerIn: parent
+                                text: root.numberDigits[parent.index] || ""
+                                font.family: "EB Garamond"
+                                font.pixelSize: 64
+                                font.features: ({ "lnum": 1 })
+                                color: "black"
+                            }
+                        }
+                    }
+                    QuietRefresh {
+                        id: numberQuiet
+                        anchors.fill: parent
+                    }
+                    InkLayer {
+                        id: numberInk
+                        anchors.fill: parent
+                        thickness: 4
+                        bleed: 10
+                    }
+                    Writer {
+                        id: numberWriter
+                        objectName: "numberWriter"
+                        ink: numberInk
+                        gridSize: 6 * root.numberBox
+                        divisions: 6
+                        rows: 1
+                        onSend: body => root.send(root.msgReadInk, {
+                            id: body.id + root.numberIds, size: root.numberBox,
+                            strokes: body.strokes.map(s => {
+                                const out = s.slice();
+                                for (let i = 0; i < out.length; i += 4)
+                                    out[i] = Math.round((out[i] - body.cell * root.numberBox) * 10) / 10;
+                                return out;
+                            })
+                        })
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        preventStealing: true
+                        property bool writing: false
+                        onPressed: mouse => {
+                            writing = root.writes(mouse);
+                            if (writing)
+                                numberWriter.down(mouse.x, mouse.y, 1);
+                        }
+                        onPositionChanged: mouse => {
+                            if (writing)
+                                numberWriter.move(mouse.x, mouse.y, 1);
+                        }
+                        onReleased: {
+                            if (writing)
+                                numberWriter.up();
+                            writing = false;
+                        }
+                        onCanceled: {
+                            if (writing)
+                                numberWriter.up();
+                            writing = false;
+                        }
+                    }
+                }
+                Text {
+                    anchors.right: parent.right
+                    anchors.baseline: numberLabel.baseline
+                    text: root.numberNote()
+                    font.family: "EB Garamond"
+                    font.italic: true
+                    font.pixelSize: 32
+                    color: "black"
                 }
             }
             Item {

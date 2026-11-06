@@ -12,6 +12,7 @@ Rectangle {
     property var info: ({})         // the `solved` body
     property string level: ""
     property bool daily: false      // the solved game was a daily puzzle
+    property int byNumber: 0        // the puzzle number, if it was written in to replay
     property bool offerToday: true
     readonly property real margin: Math.round((width - 1180) / 2)
 
@@ -47,6 +48,9 @@ Rectangle {
         if (n < 2)
             return "";
         return daily ? cap(word(n)) + " days running." : cap(word(n)) + " " + level + " puzzles in a row.";
+    }
+    function numberLine() {
+        return byNumber ? "Played by its number, so it stays out of your bests." : "";
     }
     function careLine() {
         const m = info.mistakes || 0, h = info.hints || 0;
@@ -101,7 +105,7 @@ Rectangle {
             Column {
                 spacing: 14
                 Repeater {
-                    model: [page.bestLine(), page.streakLine(), page.careLine()]
+                    model: [page.bestLine(), page.streakLine(), page.numberLine(), page.careLine()]
                     Text {
                         required property string modelData
                         required property int index

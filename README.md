@@ -21,6 +21,9 @@ handwriting, like on paper.
   checks every puzzle has exactly one solution. Easy, Medium, Hard and Expert
   are graded by the techniques a person needs, from singles up to X-wings,
   swordfish, colouring and XY-wings. Plus a daily puzzle.
+- **Play by number.** Every puzzle has a number ("Hard No. 482,137"). Write
+  it into the New game list and tap a level to play that exact puzzle, or to
+  race a friend on the same one. Replays stay out of your best times.
 - **Hints that teach.** The first press names the idea ("Only one place for
   the 7"). The second explains it and marks the cells. Mistakes in your
   answers or your notes are pointed out.

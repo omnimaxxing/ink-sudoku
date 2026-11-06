@@ -59,6 +59,7 @@ const FONT = {
 };
 
 let seed = 7;
+let numberReads = 0;
 function rand() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
 function jit(a) { return (rand() - 0.5) * 2 * a; }
 
@@ -253,7 +254,13 @@ function reply(type, contents, args) {
     }
     case 101: // newGame
         game = m.daily ? fresh(today().level, today().date) : fresh(m.level || "easy");
+        if (m.number) {
+            game.puzzle.number = game.puzzle.seed = m.number;
+            game.puzzle.byNumber = true;
+        }
         return [msg(1, stateBody())];
+    case 113: // readInk: the stub can't read; boxes written in order read as 482137
+        return [msg(10, { id: m.id, digit: Number("482137"[numberReads++ % 6]) })];
     case 102: { // ink: the stub can't read, so every mark comes back unknown
         const c = m.cell;
         return [msg(2, {

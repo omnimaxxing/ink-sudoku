@@ -14,6 +14,7 @@ Item {
     required property InkLayer ink
     property real gridSize: 1180
     property int divisions: 9       // cells per side; 1 makes the whole square one cell
+    property int rows: divisions    // fewer rows makes a strip, e.g. 6 boxes in a row
     property int restMs: 600
     readonly property real tapPx: 6
     readonly property int tapMs: 180    // wall clock, as pen-stream times have their own epoch
@@ -29,9 +30,9 @@ Item {
     readonly property bool writing: stroke !== null
 
     function cellAt(x, y) {
-        if (x < 0 || y < 0 || x >= gridSize || y >= gridSize)
-            return -1;
         const s = gridSize / divisions;
+        if (x < 0 || y < 0 || x >= gridSize || y >= s * rows)
+            return -1;
         return Math.floor(y / s) * divisions + Math.floor(x / s);
     }
 
