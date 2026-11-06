@@ -541,3 +541,21 @@ func TestRuledOutKeepsNoteMistakes(t *testing.T) {
 		t.Fatalf("got %v %q, want a Mistake for the notes in cell %d", st.Technique, st.Title, e.Cell)
 	}
 }
+
+func TestRandomSeedIsWritable(t *testing.T) {
+	for range 2000 {
+		if n := RandomSeed(); !WritableSeed(n) {
+			t.Fatalf("RandomSeed gave %d", n)
+		}
+	}
+	for _, n := range []uint64{0, 1, 99_999, 111_110, 480_213, 1_000_000, 20261104} {
+		if WritableSeed(n) {
+			t.Errorf("WritableSeed(%d) = true", n)
+		}
+	}
+	for _, n := range []uint64{111_111, 482_137, 999_999} {
+		if !WritableSeed(n) {
+			t.Errorf("WritableSeed(%d) = false", n)
+		}
+	}
+}

@@ -11,6 +11,29 @@ import (
 // (and stays exact as a JavaScript number).
 const MaxSeed = 999_999
 
+// RandomSeed is a puzzle number of six digits 1–9: the recognizer has no 0,
+// so any number on screen can be written back in to replay that puzzle.
+func RandomSeed() uint64 {
+	var n uint64
+	for range 6 {
+		n = n*10 + 1 + rand.Uint64N(9)
+	}
+	return n
+}
+
+// WritableSeed reports whether n is a puzzle number RandomSeed could give.
+func WritableSeed(n uint64) bool {
+	if n < 111_111 || n > MaxSeed {
+		return false
+	}
+	for ; n > 0; n /= 10 {
+		if n%10 == 0 {
+			return false
+		}
+	}
+	return true
+}
+
 // Queue keeps one pre-generated puzzle per level so a new game starts
 // instantly. It is safe for concurrent use.
 type Queue struct {
@@ -25,7 +48,7 @@ type Queue struct {
 // NewQueue starts filling the queue in the background, one level at a time
 // (easiest first) so it never takes both cores.
 func NewQueue() *Queue {
-	return newQueue(engine.Generate, func() uint64 { return 1 + rand.Uint64N(MaxSeed) })
+	return newQueue(engine.Generate, RandomSeed)
 }
 
 func newQueue(gen func(uint64, engine.Level) engine.Puzzle, seed func() uint64) *Queue {
