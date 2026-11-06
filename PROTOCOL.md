@@ -136,6 +136,10 @@ Decisions the QML side (`app/`) made where the above is silent:
 - **No ink, still shown.** An entry with no `answer` ink, or candidates in a cell with no `candidate`
   ink (`setCell`/`toggleCandidate`), are typeset in italic as a stand-in.
 - **Conflicts**: every listed cell gets the marker, givens included.
+- **Finished grid** (v5.2): while `solved`, the grid shows answers only. The counted-answer dots,
+  typeset candidates and pencil-mark or unread ink are hidden (kept in the game, not erased), Hint
+  and Undo leave the foot, and the note under the grid says how long it took and with how many
+  mistakes and hints (a daily also names its date).
 - **Hints** take two presses. The first sends `hint {"reveal": false}` and shows only `title`
   (italic, larger) under the grid. The next, with the board unchanged, sets `text` under it and gives
   each of `cells` a loop (`houses`/`eliminations` aren't drawn), and sends `hint {"reveal": true}`

@@ -279,7 +279,7 @@ Rectangle {
         inkRoles = roles;
         settled.setAll(inkMap, dimInk);
         hint = null;
-        note = solved ? solvedNote || "Solved." : "";
+        note = solved ? solvedNote || solvedText({ elapsedMs: s.elapsedMs }) : "";
         if (fresh && !first)
             flash.start();
     }
@@ -567,11 +567,26 @@ Rectangle {
     function count(n, word) {
         return (n === 0 ? "no" : String(n)) + " " + word + (n === 1 ? "" : "s");
     }
+    // The finished grid's caption: how long, and with what help (the running head names
+    // the puzzle; a daily also gets its date).
     function solvedText(m) {
-        const s = Math.round((m.elapsedMs || 0) / 1000);
-        const time = Math.floor(s / 60) + " min " + (s % 60) + " s";
-        return "Solved in " + time + ", with " + count(m.mistakes || 0, "mistake")
-            + " and " + count(m.hints || 0, "hint") + ".";
+        const p = puzzle || {};
+        let s = (p.daily ? "The puzzle for " + longDate(p.daily) + ", solved in " : "Solved in ")
+            + duration(m.elapsedMs || 0);
+        if (m.mistakes !== undefined) {
+            const mk = m.mistakes || 0, h = m.hints || 0;
+            s += mk || h ? ", with " + count(mk, "mistake") + " and " + count(h, "hint")
+                         : ", without a mistake or a hint";
+        }
+        return s + ".";
+    }
+    function duration(ms) {
+        const s = Math.round(ms / 1000);
+        const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, sec = s % 60;
+        const unit = (n, w) => n + " " + w + (n === 1 ? "" : "s");
+        if (h > 0)
+            return unit(h, "hour") + " " + unit(m, "minute");
+        return m > 0 ? unit(m, "minute") + " " + unit(sec, "second") : unit(sec, "second");
     }
 
     // Dates are the backend's local "YYYY-MM-DD"; parsed by hand (ISO parsing is UTC).
@@ -702,6 +717,7 @@ Rectangle {
             candidates: root.candidates
             conflicts: root.conflicts
             inkRoles: root.inkRoles
+            finished: root.solved
             hintCells: root.hint && root.hintRevealed && root.hint.cells ? root.hint.cells : []
             selected: root.selected
         }
@@ -709,6 +725,7 @@ Rectangle {
             id: settled
             anchors.fill: parent
             thickness: live.thickness
+            finished: root.solved
         }
         QuietRefresh {
             id: gridQuiet
@@ -841,8 +858,8 @@ Rectangle {
             anchors.bottomMargin: 56
             spacing: 64
             Action { label: "New game"; onTap: root.chooserOpen = !root.chooserOpen }
-            Action { label: "Hint"; onTap: root.askHint() }
-            Action { label: "Undo"; enabled: root.canUndo; onTap: root.undo() }
+            Action { label: "Hint"; visible: !root.solved; onTap: root.askHint() }
+            Action { label: "Undo"; visible: !root.solved; enabled: root.canUndo; onTap: root.undo() }
             // Tap: quiet clean-up of the grid, no page blink. Hold: the full black flash.
             Action {
                 label: "Refresh"

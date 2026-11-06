@@ -13,6 +13,7 @@ Item {
     property real candidateThickness: 3 // pencil marks settle thinner: how the ink was read
     property real bleed: 40
     property int displayMethod: 3
+    property bool finished: false   // solved: draw answer ink only (no pencil marks or dotted ink)
     readonly property real cell: width / 9
 
     // strokes: [{role, points}], dim: [points]
@@ -54,6 +55,8 @@ Item {
                 visible: strokes.length > 0 || dim.length > 0
                 onStrokesChanged: requestPaint()
                 onDimChanged: requestPaint()
+                readonly property bool finished: settled.finished
+                onFinishedChanged: requestPaint()
 
                 onPaint: {
                     const ctx = getContext("2d");
@@ -66,13 +69,15 @@ Item {
                     ctx.lineCap = "round";
                     ctx.lineJoin = "round";
                     for (const s of strokes) {
+                        if (settled.finished && s.role !== "answer")
+                            continue;
                         ctx.lineWidth = s.role === "candidate" ? settled.candidateThickness : settled.thickness;
                         if (s.role === "answer" || s.role === "candidate")
                             solid(ctx, s.points);
                         else
                             dotted(ctx, s.points);
                     }
-                    for (const pts of dim)
+                    for (const pts of settled.finished ? [] : dim)
                         dotted(ctx, pts);
                 }
                 function solid(ctx, pts) {

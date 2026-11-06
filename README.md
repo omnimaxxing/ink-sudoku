@@ -7,7 +7,7 @@ handwriting, like on paper.
 <p>
 <img src="docs/hint.png" width="32%" alt="A game in progress with a hint">
 <img src="docs/chooser.png" width="32%" alt="Choosing a new game">
-<img src="docs/solved.png" width="32%" alt="The solved page">
+<img src="docs/finished.png" width="32%" alt="A finished grid">
 </p>
 
 - **Write big for an answer, small in a corner for a pencil mark, scratch over
@@ -30,7 +30,8 @@ handwriting, like on paper.
 - **Made for e-ink.** Quiet partial refreshes while you play. Tap Refresh for a
   quiet clean-up; hold it for a full flash.
 - Undo, a timer that pauses while the tablet sleeps, best times and streaks per
-  level.
+  level. A solved puzzle leaves a clean page: just your handwritten answers and
+  the printed digits, with how long it took.
 
 Everything runs on the tablet. Nothing goes over the network, and your
 handwriting samples stay in `/home/root/.local/share/ink-sudoku/`.

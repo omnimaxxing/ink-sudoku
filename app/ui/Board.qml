@@ -16,6 +16,7 @@ Item {
     property var inkRoles: []       // per cell: 1 = has answer ink, 2 = has candidate ink
     property var hintCells: []
     property int selected: -1
+    property bool finished: false   // solved: answers only, no dots or pencil marks
     property real bleed: 40
     readonly property real cell: width / 9
 
@@ -69,7 +70,7 @@ Item {
                     readonly property string given: board.givens.length === 81 && board.givens[index] !== "." ? board.givens[index] : ""
                     readonly property string entry: !given && board.entries.length === 81 && board.entries[index] !== "." ? board.entries[index] : ""
                     readonly property int roles: board.inkRoles[index] || 0
-                    readonly property int cands: !given && !entry && !(roles & 2) ? (board.candidates[index] || 0) : 0
+                    readonly property int cands: !board.finished && !given && !entry && !(roles & 2) ? (board.candidates[index] || 0) : 0
                     x: board.cellX(index)
                     y: board.cellY(index)
                     width: board.cell
@@ -102,7 +103,7 @@ Item {
                     // Counted as an answer: a small dot top right, so a digit read as a
                     // pencil mark (no dot) stands out.
                     Rectangle {
-                        visible: cellItem.entry !== ""
+                        visible: cellItem.entry !== "" && !board.finished
                         x: board.cell - 24
                         y: 16
                         width: 8
