@@ -1,0 +1,8 @@
+{
+    "id": "ink-kakuro",
+    "name": "Ink Kakuro",
+    "loadsBackend": true,
+    "entry": "/ui/main.qml",
+    "canHaveMultipleFrontends": false,
+    "supportsScaling": false
+}

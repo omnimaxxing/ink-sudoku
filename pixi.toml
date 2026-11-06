@@ -1,0 +1,12 @@
+[workspace]
+channels = ["conda-forge"]
+name = "sudoku"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+go = ">=1.27.3,<2"
+qt6-main = ">=6.11.1,<7"
+nodejs = ">=26.12.1,<26.13"

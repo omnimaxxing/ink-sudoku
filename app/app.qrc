@@ -1,0 +1,13 @@
+<RCC>
+    <qresource prefix="/">
+        <file>ui/main.qml</file>
+        <file>ui/Action.qml</file>
+        <file>ui/Board.qml</file>
+        <file>ui/Calibration.qml</file>
+        <file>ui/InkLayer.qml</file>
+        <file>ui/QuietRefresh.qml</file>
+        <file>ui/SettledInk.qml</file>
+        <file>ui/SolvedPage.qml</file>
+        <file>ui/Writer.qml</file>
+    </qresource>
+</RCC>

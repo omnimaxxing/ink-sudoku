@@ -1,0 +1,7 @@
+.pixi/
+hwrtrain/data/
+hwrtrain/.venv/
+dist/
+*.rcc
+dev/fonts/
+.DS_Store

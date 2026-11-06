@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>ui/main.qml</file>
+        <file>ui/InkPanel.qml</file>
+        <file>ui/ShapesTest.qml</file>
+    </qresource>
+</RCC>

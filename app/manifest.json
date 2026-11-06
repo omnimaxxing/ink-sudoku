@@ -1,0 +1,8 @@
+{
+    "id": "ink-sudoku",
+    "name": "Ink Sudoku",
+    "loadsBackend": true,
+    "entry": "/ui/main.qml",
+    "canHaveMultipleFrontends": false,
+    "supportsScaling": false
+}
