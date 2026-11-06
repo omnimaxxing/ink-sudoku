@@ -559,3 +559,15 @@ func TestRandomSeedIsWritable(t *testing.T) {
 		}
 	}
 }
+
+func TestByNumberPersists(t *testing.T) {
+	st := Store{Dir: t.TempDir()}
+	g := NewByNumber(engine.Generate(482137, engine.Hard))
+	if err := st.Save(g, t0); err != nil {
+		t.Fatal(err)
+	}
+	h, err := st.Load()
+	if err != nil || !h.ByNumber() || h.Seed() != 482137 {
+		t.Fatalf("loaded %v, err %v", h, err)
+	}
+}

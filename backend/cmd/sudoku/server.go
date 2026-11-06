@@ -31,6 +31,7 @@ const (
 	msgCalibration     int32 = 7
 	msgCalibrationRead int32 = 8
 	msgPersonalized    int32 = 9
+	msgInkRead         int32 = 10
 
 	msgHello           int32 = 100
 	msgNewGame         int32 = 101
@@ -46,6 +47,7 @@ const (
 	msgCalibrationInk   int32 = 110
 	msgCalibrationDone  int32 = 111
 	msgView             int32 = 112
+	msgReadInk          int32 = 113
 )
 
 // server handles one frontend. handle runs on the socket goroutine and
@@ -190,6 +192,8 @@ func (s *server) handle(typ int32, body string) {
 		s.calibrationInk(body)
 	case msgCalibrationDone:
 		s.calibrationDone()
+	case msgReadInk:
+		s.readInk(body)
 	case msgView:
 		var req struct {
 			Board bool `json:"board"`
@@ -273,6 +277,9 @@ func (s *server) newGame(body string) {
 		Level string `json:"level"`
 		Seed  uint64 `json:"seed"` // optional: replay a given puzzle
 		Daily bool   `json:"daily"`
+		// Number replays a puzzle the player wrote in by number; it is kept
+		// out of the stats.
+		Number uint64 `json:"number"`
 	}
 	if !s.decode(body, &req) {
 		return
@@ -295,6 +302,14 @@ func (s *server) newGame(body string) {
 		s.fail(0, "unknown level %q", req.Level)
 		return
 	}
+	if req.Number != 0 {
+		if !game.WritableSeed(req.Number) {
+			s.fail(0, "No. %d isn't a puzzle number: six digits, 1 to 9", req.Number)
+			return
+		}
+		s.start(game.NewByNumber(engine.Generate(req.Number, level)))
+		return
+	}
 	var p engine.Puzzle
 	if req.Seed != 0 {
 		p = engine.Generate(req.Seed, level)
@@ -307,7 +322,7 @@ func (s *server) newGame(body string) {
 // start replaces the current game with g, counts it in the stats and
 // sends its state.
 func (s *server) start(g *game.Game) {
-	s.stats.Start(s.g, g.Level())
+	s.stats.Start(s.g, g)
 	s.saveStats()
 	s.g = g
 	s.g.SetGridSize(s.gridSize)
@@ -480,6 +495,38 @@ func (s *server) calibrationInk(body string) {
 	s.sendCalibration()
 }
 
+// readInk reads the digit written in a square box (the puzzle number on the
+// New game list). Unlike calibration ink it teaches the recognizer nothing.
+func (s *server) readInk(body string) {
+	var req struct {
+		ID      int64       `json:"id"`
+		Size    float32     `json:"size"`
+		Strokes [][]float32 `json:"strokes"`
+	}
+	if !s.decode(body, &req) {
+		return
+	}
+	strokes, err := game.ParseStrokes(req.Strokes)
+	if err == nil && (len(strokes) == 0 || req.Size <= 0) {
+		err = fmt.Errorf("no ink, or size %g", req.Size)
+	}
+	if err != nil {
+		s.fail(req.ID, "readInk: %v", err)
+		return
+	}
+	msg := inkReadMsg{ID: req.ID}
+	marks := s.analyzer.Analyze(hwr.Rect{X1: req.Size, Y1: req.Size}, strokes)
+	for _, m := range marks {
+		if m.Kind == hwr.ScratchOut {
+			msg.Scratch = true
+		}
+	}
+	if !msg.Scratch && len(marks) == 1 && (marks[0].Kind == hwr.Answer || marks[0].Kind == hwr.Candidate) {
+		msg.Digit = marks[0].Digit
+	}
+	s.reply(msgInkRead, msg)
+}
+
 func (s *server) calibrationDone() {
 	before, after := hwr.EvaluatePersonal(s.model, s.samples)
 	log.Printf("personalized: %d samples, leave-one-out %.3f -> %.3f", len(s.samples), before, after)
@@ -599,6 +646,7 @@ func (s *server) sendState() {
 		Puzzle: puzzleJSON{
 			Number: g.Seed(), Seed: g.Seed(), Level: strings.ToLower(g.Level().String()),
 			Hardest: g.Hardest(), Givens: g.Givens().String(), Daily: g.Daily(),
+			ByNumber: g.ByNumber(),
 		},
 		Entries:    g.Entries().String(),
 		Candidates: g.Candidates(),

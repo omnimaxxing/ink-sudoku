@@ -38,7 +38,7 @@ func TestStats(t *testing.T) {
 		return &Game{level: l, elapsed: d, daily: daily}
 	}
 
-	s.Start(nil, engine.Hard)
+	s.Start(nil, &Game{level: engine.Hard})
 	g := solved(engine.Hard, 5*time.Minute, "")
 	if best, streak := s.Solve(g, t0); !best || streak != 1 || s.Hard != (LevelStats{Played: 1, Solved: 1, BestMs: 300_000, Streak: 1}) {
 		t.Fatalf("first solve: best %v streak %d, %+v", best, streak, s.Hard)
@@ -46,19 +46,19 @@ func TestStats(t *testing.T) {
 	if best, _ := s.Solve(g, t0); best || s.Hard.Solved != 1 {
 		t.Fatal("re-solving the same game counted again")
 	}
-	s.Start(g, engine.Hard)
+	s.Start(g, &Game{level: engine.Hard})
 	if best, streak := s.Solve(solved(engine.Hard, 6*time.Minute, ""), t0); best || streak != 2 || s.Hard.BestMs != 300_000 {
 		t.Fatalf("slower solve: best %v streak %d, %+v", best, streak, s.Hard)
 	}
-	s.Start(nil, engine.Hard)
+	s.Start(nil, &Game{level: engine.Hard})
 	if best, _ := s.Solve(solved(engine.Hard, 4*time.Minute, ""), t0); !best || s.Hard.BestMs != 240_000 {
 		t.Fatalf("faster solve: best %v, %+v", best, s.Hard)
 	}
-	s.Start(unsolved(engine.Easy), engine.Hard) // abandoning an easy game leaves the hard streak alone
+	s.Start(unsolved(engine.Easy), &Game{level: engine.Hard}) // abandoning an easy game leaves the hard streak alone
 	if s.Hard.Streak != 3 || s.Hard.Played != 4 {
 		t.Fatalf("%+v", s.Hard)
 	}
-	s.Start(unsolved(engine.Hard), engine.Easy)
+	s.Start(unsolved(engine.Hard), &Game{level: engine.Easy})
 	if s.Hard.Streak != 0 || s.Easy.Played != 1 {
 		t.Fatalf("abandoned hard game: hard %+v easy %+v", s.Hard, s.Easy)
 	}
@@ -110,5 +110,22 @@ func TestCalibrationOrder(t *testing.T) {
 		if got[i] == got[i-1] {
 			t.Errorf("%d prompted twice in a row", got[i])
 		}
+	}
+}
+
+func TestStatsSkipGamesByNumber(t *testing.T) {
+	var s Stats
+	s.Start(nil, &Game{level: engine.Hard})
+	s.Solve(&Game{level: engine.Hard, elapsed: 5 * time.Minute}, t0)
+	before := s
+
+	byNumber := &Game{level: engine.Hard, elapsed: time.Minute, byNumber: true}
+	s.Start(nil, byNumber)
+	if best, streak := s.Solve(byNumber, t0); best || streak != 0 || s != before || !byNumber.recorded {
+		t.Fatalf("a replayed puzzle changed the stats: best %v streak %d, %+v", best, streak, s.Hard)
+	}
+	s.Start(&Game{level: engine.Hard, solution: engine.Grid{1}, byNumber: true}, &Game{level: engine.Easy, byNumber: true})
+	if s.Hard.Streak != 1 || s.Easy.Played != 0 {
+		t.Fatalf("leaving a replayed puzzle unsolved broke the streak: %+v", s)
 	}
 }

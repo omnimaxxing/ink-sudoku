@@ -45,13 +45,16 @@ func (s *Stats) Level(l engine.Level) *LevelStats {
 	return &s.Expert
 }
 
-// Start records a new game at level replacing prev (nil if none). Leaving
-// prev unsolved breaks its level's streak.
-func (s *Stats) Start(prev *Game, level engine.Level) {
-	if prev != nil && !prev.recorded && !prev.Solved() {
+// Start records the new game next replacing prev (nil if none). Leaving
+// prev unsolved breaks its level's streak. Games started by number don't
+// count either way.
+func (s *Stats) Start(prev, next *Game) {
+	if prev != nil && !prev.recorded && !prev.byNumber && !prev.Solved() {
 		s.Level(prev.level).Streak = 0
 	}
-	s.Level(level).Played++
+	if !next.byNumber {
+		s.Level(next.level).Played++
+	}
 }
 
 // Solve records g as solved after g.Elapsed(now). It reports whether that is
@@ -59,6 +62,10 @@ func (s *Stats) Start(prev *Game, level engine.Level) {
 // solve extended: the daily streak for a daily puzzle, else the level's.
 // A game counts once; solving it again after an undo changes nothing.
 func (s *Stats) Solve(g *Game, now time.Time) (best bool, streak int) {
+	if g.byNumber {
+		g.recorded = true
+		return false, 0
+	}
 	ls := s.Level(g.level)
 	if !g.recorded {
 		g.recorded = true

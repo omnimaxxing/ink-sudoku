@@ -434,3 +434,50 @@ func TestTakeDaily(t *testing.T) {
 		t.Fatal("pre-generated daily not used")
 	}
 }
+
+func TestPlayByNumber(t *testing.T) {
+	h := newHarness(t, t.TempDir())
+	h.call(msgHello, `{"gridSize": 900}`, msgState)
+
+	// A digit written in a number box is read (five{} reads everything as 5)
+	// and never logged as a sample.
+	stroke := `[[10, 10, 0, 0.5, 40, 70, 30, 0.5, 70, 120, 60, 0.5]]`
+	r := h.call(msgReadInk, `{"id": 3, "size": 140, "strokes": `+stroke+`}`, msgInkRead)[0]
+	if r["id"] != 3.0 || r["digit"] != 5.0 {
+		t.Fatalf("inkRead: %v", r)
+	}
+	if _, err := os.Stat(filepath.Join(h.dir, "samples.jsonl")); err == nil {
+		t.Fatal("readInk logged a sample")
+	}
+	h.call(msgReadInk, `{"id": 4, "size": 140, "strokes": []}`, msgError)
+
+	st := h.call(msgNewGame, `{"level": "hard", "number": 482137}`, msgState)[0]
+	pz := st["puzzle"].(map[string]any)
+	if pz["number"] != 482137.0 || pz["level"] != "hard" || pz["byNumber"] != true ||
+		pz["givens"] != engine.Generate(482137, engine.Hard).Givens.String() {
+		t.Fatalf("puzzle by number: %v", pz)
+	}
+	if hard := st["stats"].(map[string]any)["hard"].(map[string]any); hard["played"] != 0.0 {
+		t.Fatalf("a replayed puzzle counted as played: %v", hard)
+	}
+
+	givens, _ := engine.ParseGrid(pz["givens"].(string))
+	sol, _ := engine.Solve(givens)
+	var solved map[string]any
+	for c, v := range givens {
+		if v == 0 {
+			h.out = nil
+			h.s.handle(msgSetCell, fmt.Sprintf(`{"cell": %d, "digit": %d}`, c, sol[c]))
+			if len(h.out) == 2 {
+				solved = h.out[1].body
+			}
+		}
+	}
+	if solved == nil || solved["best"] != false || solved["streak"] != 0.0 {
+		t.Fatalf("solved by number: %v", solved)
+	}
+
+	for _, bad := range []string{`{"level": "hard", "number": 480213}`, `{"level": "hard", "number": 12345}`} {
+		h.call(msgNewGame, bad, msgError)
+	}
+}

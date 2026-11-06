@@ -16,6 +16,8 @@ type puzzleJSON struct {
 	Hardest string `json:"hardest"`
 	Givens  string `json:"givens"`
 	Daily   string `json:"daily"` // date of the daily puzzle, "" otherwise
+	// ByNumber is set for a game started from a written puzzle number.
+	ByNumber bool `json:"byNumber,omitempty"`
 }
 
 type stateMsg struct {
@@ -64,6 +66,12 @@ type solvedMsg struct {
 	Hints     int   `json:"hints"`
 	Best      bool  `json:"best"`   // new best time for the level
 	Streak    int   `json:"streak"` // daily streak for a daily, else the level's
+}
+
+type inkReadMsg struct {
+	ID      int64 `json:"id"`
+	Digit   int   `json:"digit"` // 1–9, 0 when the ink isn't one clear digit
+	Scratch bool  `json:"scratch,omitempty"`
 }
 
 type calibrationMsg struct {

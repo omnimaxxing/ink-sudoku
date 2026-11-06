@@ -53,6 +53,7 @@ type file struct {
 	Hardest   string            `json:"hardest"`
 	Daily     string            `json:"daily,omitempty"`
 	Recorded  bool              `json:"recorded,omitempty"`
+	ByNumber  bool              `json:"byNumber,omitempty"`
 	Givens    string            `json:"givens"`
 	Solution  string            `json:"solution"`
 	GridSize  float32           `json:"gridSize"`
@@ -76,7 +77,7 @@ type fileBoard struct {
 func (s Store) Save(g *Game, now time.Time) error {
 	f := file{
 		V: 1, Seed: g.seed, Level: strings.ToLower(g.level.String()), Hardest: g.hardest,
-		Daily: g.daily, Recorded: g.recorded,
+		Daily: g.daily, Recorded: g.recorded, ByNumber: g.byNumber,
 		Givens: g.givens.String(), Solution: g.solution.String(), GridSize: g.gridSize,
 		ElapsedMs: g.Elapsed(now).Milliseconds(), Mistakes: g.mistakes, Hints: g.hints,
 		Strokes: map[int][]float32{},
@@ -169,7 +170,7 @@ func decode(b []byte) (*Game, error) {
 	if err != nil || level > engine.Expert {
 		return nil, fmt.Errorf("bad level %q", f.Level)
 	}
-	g := &Game{seed: f.Seed, level: level, hardest: f.Hardest, daily: f.Daily, recorded: f.Recorded, gridSize: f.GridSize,
+	g := &Game{seed: f.Seed, level: level, hardest: f.Hardest, daily: f.Daily, recorded: f.Recorded, byNumber: f.ByNumber, gridSize: f.GridSize,
 		elapsed: time.Duration(f.ElapsedMs) * time.Millisecond, mistakes: f.Mistakes, hints: f.Hints,
 		points: map[int][]float32{}}
 	for c, m := range f.RuledOut {

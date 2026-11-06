@@ -108,6 +108,7 @@ type Game struct {
 	solution engine.Grid
 	daily    string // date of the daily puzzle, "" for other games
 	recorded bool   // the solve has been counted in Stats
+	byNumber bool   // started from a written puzzle number: kept out of Stats
 
 	board
 	undo   []board
@@ -146,6 +147,14 @@ func New(p engine.Puzzle) *Game {
 	return g
 }
 
+// NewByNumber starts p, asked for by its puzzle number. It may be a puzzle
+// the player has solved before, so it never counts in Stats.
+func NewByNumber(p engine.Puzzle) *Game {
+	g := New(p)
+	g.byNumber = true
+	return g
+}
+
 // NewDaily starts the daily puzzle p for date ("2006-01-02").
 func NewDaily(p engine.Puzzle, date string) *Game {
 	g := New(p)
@@ -155,6 +164,7 @@ func NewDaily(p engine.Puzzle, date string) *Game {
 
 func (g *Game) Seed() uint64                   { return g.seed }
 func (g *Game) Daily() string                  { return g.daily }
+func (g *Game) ByNumber() bool                 { return g.byNumber }
 func (g *Game) Level() engine.Level            { return g.level }
 func (g *Game) Hardest() string                { return g.hardest }
 func (g *Game) Givens() engine.Grid            { return g.givens }
