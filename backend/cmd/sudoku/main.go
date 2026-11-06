@@ -62,7 +62,8 @@ func main() {
 			break
 		}
 		if m.Type == appload.MsgTerminate {
-			// Wait for AppLoad to close its end first; see piano's main.
+			// Wait for AppLoad to close its end first: AppLoad tears apps down from
+			// two threads without a lock, and closing first races it (README, Known issue).
 			log.Print("terminate")
 			conn.AwaitClose(2 * time.Second)
 			break

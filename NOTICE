@@ -1,0 +1,25 @@
+Ink Sudoku / Ink Kakuro
+Copyright (c) 2026 Jake Palmer. The code is MIT-licensed (see LICENSE).
+
+The digit recognizer weights (backend/hwr/model.bin) were trained by
+hwrtrain/ on the following datasets. The datasets are not included in this
+repository.
+
+- MNIST. Y. LeCun, C. Cortes, C. J. C. Burges. Derived from NIST Special
+  Databases 1 and 3. No explicit license is published with the files; it is
+  commonly redistributed under CC BY-SA 3.0.
+- EMNIST (letters, used only as "not a digit" examples). G. Cohen,
+  S. Afshar, J. Tapson, A. van Schaik, "EMNIST: an extension of MNIST to
+  handwritten letters", 2017. Derived from NIST Special Database 19.
+- Pen-Based Recognition of Handwritten Digits. E. Alpaydin, F. Alimoglu.
+  UCI Machine Learning Repository, dataset 81. CC BY 4.0.
+- UJI Pen Characters (Version 2). D. Llorens et al. UCI Machine Learning
+  Repository, dataset 177. Version 1 (dataset 160) is CC BY 4.0; the terms
+  of version 2 could not be confirmed when the model was trained.
+
+The apps draw text in EB Garamond (SIL Open Font License 1.1), which ships
+with the reMarkable system software and is not included here.
+
+Ink Sudoku runs inside AppLoad by asivery (https://github.com/asivery/rm-appload);
+no AppLoad code is included. Its message protocol was implemented from
+documentation and observed behaviour (see PROTOCOL.md).

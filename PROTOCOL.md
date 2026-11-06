@@ -141,7 +141,9 @@ Decisions the QML side (`app/`) made where the above is silent:
   each of `cells` a loop (`houses`/`eliminations` aren't drawn), and sends `hint {"reveal": true}`
   so it counts. The frontend keeps the step until ink is sent or a `state` brings other
   `entries`/`candidates` or a new game, so a hint dismissed meanwhile comes back as far as it got
-  without asking again. Without `title`, `text` alone is set in italic, in full at once. The hint
+  without asking again. The exception is a revealed step with `eliminations` and no `placement`:
+  the backend keeps what it ruled out, so the next press forgets it and asks for a new nudge
+  instead of showing the same step again. Without `title`, `text` alone is set in italic, in full at once. The hint
   clears on the next `ink` sent, any `state`, a `marks` that changes an entry, or a pen tap.
 - **Taps.** A pen contact that stays within 6 px of where it landed and lifts within 180 ms (wall
   clock) is a tap, not ink: its live dot is erased and nothing is sent (in the calibration box too).

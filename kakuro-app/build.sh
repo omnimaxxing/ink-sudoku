@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds dist/ink-kakuro/ (copy to /home/root/xovi/exthome/appload/ on the tablet;
-# from sudoku/: ../scripts/deploy-app.sh dist/ink-kakuro).
+# from the repo root: scripts/deploy-app.sh dist/ink-kakuro).
 set -euo pipefail
 cd "$(dirname "$0")"
 out=../dist/ink-kakuro
