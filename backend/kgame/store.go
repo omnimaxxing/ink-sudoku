@@ -56,6 +56,7 @@ type file struct {
 	ElapsedMs int64             `json:"elapsedMs"`
 	Mistakes  int               `json:"mistakes"`
 	Hints     int               `json:"hints"`
+	RuledOut  map[int]uint16    `json:"ruledOut,omitempty"` // cell -> digits revealed hints eliminated
 	Board     fileBoard         `json:"board"`
 	Undo      []fileBoard       `json:"undo,omitempty"`
 	Strokes   map[int][]float32 `json:"strokes,omitempty"`
@@ -117,6 +118,14 @@ func (s Store) Save(g *Game, now time.Time) error {
 		Daily: g.daily, Recorded: g.recorded, GridSize: g.gridSize,
 		ElapsedMs: g.Elapsed(now).Milliseconds(), Mistakes: g.mistakes, Hints: g.hints,
 		Strokes: map[int][]float32{},
+	}
+	for c, m := range g.ruledOut {
+		if m != 0 {
+			if f.RuledOut == nil {
+				f.RuledOut = map[int]uint16{}
+			}
+			f.RuledOut[c] = m
+		}
 	}
 	for _, c := range p.Cells {
 		black := 0
@@ -228,6 +237,12 @@ func decode(b []byte) (*Game, error) {
 	g.daily, g.recorded, g.gridSize = f.Daily, f.Recorded, f.GridSize
 	g.elapsed = time.Duration(f.ElapsedMs) * time.Millisecond
 	g.mistakes, g.hints = f.Mistakes, f.Hints
+	for c, m := range f.RuledOut {
+		if !g.validCell(c) || m >= 1<<9 {
+			return nil, fmt.Errorf("ruledOut: cell %d mask %#x", c, m)
+		}
+		g.ruledOut[c] = m
+	}
 	for id, pts := range f.Strokes {
 		if len(pts) < 4 || len(pts)%4 != 0 {
 			return nil, fmt.Errorf("stroke %d: %d values", id, len(pts))

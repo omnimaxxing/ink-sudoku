@@ -59,6 +59,7 @@ type file struct {
 	ElapsedMs int64             `json:"elapsedMs"`
 	Mistakes  int               `json:"mistakes"`
 	Hints     int               `json:"hints"`
+	RuledOut  map[int]uint16    `json:"ruledOut,omitempty"` // cell -> digits revealed hints eliminated
 	Board     fileBoard         `json:"board"`
 	Undo      []fileBoard       `json:"undo"`
 	Strokes   map[int][]float32 `json:"strokes"`
@@ -79,6 +80,14 @@ func (s Store) Save(g *Game, now time.Time) error {
 		Givens: g.givens.String(), Solution: g.solution.String(), GridSize: g.gridSize,
 		ElapsedMs: g.Elapsed(now).Milliseconds(), Mistakes: g.mistakes, Hints: g.hints,
 		Strokes: map[int][]float32{},
+	}
+	for c, m := range g.ruledOut {
+		if m != 0 {
+			if f.RuledOut == nil {
+				f.RuledOut = map[int]uint16{}
+			}
+			f.RuledOut[c] = m
+		}
 	}
 	enc := func(b *board) fileBoard {
 		fb := fileBoard{Entries: b.entries.String(), Candidates: b.candidates}
@@ -163,6 +172,12 @@ func decode(b []byte) (*Game, error) {
 	g := &Game{seed: f.Seed, level: level, hardest: f.Hardest, daily: f.Daily, recorded: f.Recorded, gridSize: f.GridSize,
 		elapsed: time.Duration(f.ElapsedMs) * time.Millisecond, mistakes: f.Mistakes, hints: f.Hints,
 		points: map[int][]float32{}}
+	for c, m := range f.RuledOut {
+		if !validCell(c) || m >= 1<<9 {
+			return nil, fmt.Errorf("ruledOut: cell %d mask %#x", c, m)
+		}
+		g.ruledOut[c] = m
+	}
 	if g.givens, err = engine.ParseGrid(f.Givens); err != nil {
 		return nil, fmt.Errorf("givens: %w", err)
 	}

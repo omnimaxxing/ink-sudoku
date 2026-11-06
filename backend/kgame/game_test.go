@@ -313,3 +313,69 @@ func TestSamplesBothDirs(t *testing.T) {
 		t.Fatalf("missing Ink Sudoku dir: %v", err)
 	}
 }
+
+// eliminationGame plays solution digits until the next hint is an
+// elimination step, so it can't change the board on its own.
+func eliminationGame(t *testing.T) (*Game, kakuro.Step) {
+	t.Helper()
+	for seed := uint64(1); seed < 200; seed++ {
+		g := New(kakuro.Generate(seed, kakuro.Hard))
+		for {
+			st, ok := g.Hint(false)
+			if !ok {
+				break
+			}
+			if st.Placement == nil && len(st.Eliminations) > 0 {
+				return g, st
+			}
+			if st.Placement == nil {
+				break
+			}
+			g.SetCell(st.Placement.Cell, int(st.Placement.Digit), t0)
+		}
+	}
+	t.Fatal("no puzzle reached an elimination step")
+	return nil, kakuro.Step{}
+}
+
+func sameStep(a, b kakuro.Step) bool {
+	return a.Title == b.Title && reflect.DeepEqual(a.Eliminations, b.Eliminations)
+}
+
+func TestRevealedEliminationsAreKept(t *testing.T) {
+	g, first := eliminationGame(t)
+	if nudge, _ := g.Hint(false); !sameStep(nudge, first) {
+		t.Fatal("a nudge must not consume the step")
+	}
+	g.Hint(true)
+	next, ok := g.Hint(false)
+	if !ok || sameStep(next, first) {
+		t.Fatalf("after revealing %q the next hint repeated it", first.Title)
+	}
+	st := Store{Dir: t.TempDir()}
+	if err := st.Save(g, t0); err != nil {
+		t.Fatal(err)
+	}
+	h, err := st.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(h.ruledOut, g.ruledOut) {
+		t.Fatal("ruledOut lost in save/load")
+	}
+	if loaded, _ := h.Hint(false); !sameStep(loaded, next) {
+		t.Fatal("a reloaded game gives a different next hint")
+	}
+}
+
+func TestRuledOutKeepsNoteMistakes(t *testing.T) {
+	g, first := eliminationGame(t)
+	g.Hint(true)
+	e := first.Eliminations[0]
+	if _, err := g.ToggleCandidate(e.Cell, int(e.Digit), t0); err != nil {
+		t.Fatal(err)
+	}
+	if st, ok := g.Hint(false); !ok || st.Technique != "Mistake" {
+		t.Fatalf("got %v %q, want a Mistake for the notes in cell %d", st.Technique, st.Title, e.Cell)
+	}
+}

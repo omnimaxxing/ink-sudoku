@@ -117,6 +117,10 @@ type Game struct {
 	gridSize float32
 	mistakes int
 	hints    int
+	// ruledOut holds, per cell, the digits a revealed hint eliminated. Hints
+	// only reason from a correct board, so these stay true through undo; they
+	// let the next hint move on for players who don't keep pencil marks.
+	ruledOut [81]uint16
 
 	elapsed   time.Duration
 	since     time.Time // start of the current running stretch; zero when stopped
@@ -346,11 +350,33 @@ func (g *Game) Undo(now time.Time) bool {
 // false once the puzzle is solved. It counts as a hint when reveal is set
 // (the player sees the whole step), not for a nudge (its title alone).
 func (g *Game) Hint(reveal bool) (engine.Step, bool) {
-	st, ok := engine.NextStep(g.givens, g.entries, g.candidates)
+	st, ok := engine.NextStep(g.givens, g.entries, g.hintCandidates())
 	if ok && reveal {
 		g.hints++
+		for _, e := range st.Eliminations {
+			g.ruledOut[e.Cell] |= engine.CandidateBit(e.Digit)
+		}
 	}
 	return st, ok
+}
+
+// hintCandidates is the player's pencil marks minus what revealed hints ruled
+// out. A cell with marks never drops to 0 (NextStep's "no marks"), so marks
+// that leave out the answer are still reported as a mistake.
+func (g *Game) hintCandidates() [81]uint16 {
+	const all = 1<<9 - 1
+	var out [81]uint16
+	for c, marks := range g.candidates {
+		if marks == 0 {
+			marks = all
+		}
+		if m := marks &^ g.ruledOut[c]; m != 0 {
+			out[c] = m
+		} else if g.candidates[c] != 0 {
+			out[c] = g.candidates[c]
+		}
+	}
+	return out
 }
 
 // Applied is what one ink message did to the game.

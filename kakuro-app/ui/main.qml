@@ -429,6 +429,9 @@ Rectangle {
     function askHint() {
         act(() => {
             note = "";
+            // The backend keeps a revealed elimination, so the next press moves on.
+            if (hintStep && hintRevealed && !hintStep.placement && (hintStep.eliminations || []).length > 0)
+                forgetHint();
             if (!hintStep) {
                 hintReveal = false;
                 send(msgHintRequest, { reveal: false });

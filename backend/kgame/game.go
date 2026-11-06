@@ -120,6 +120,10 @@ type Game struct {
 	gridSize float32
 	mistakes int
 	hints    int
+	// ruledOut holds, per cell, the digits a revealed hint eliminated. Hints
+	// only reason from a correct board, so these stay true through undo; they
+	// let the next hint move on for players who don't keep pencil marks.
+	ruledOut []uint16
 
 	elapsed   time.Duration
 	since     time.Time // start of the current running stretch; zero when stopped
@@ -164,7 +168,8 @@ func New(p kakuro.Puzzle) *Game {
 	p.Cells = slices.Clone(p.Cells)
 	p.Solution = slices.Clone(p.Solution)
 	n := p.N * p.N
-	return &Game{puzzle: p, board: newBoard(n), points: map[int][]float32{}, last: make([]*answerRec, n)}
+	return &Game{puzzle: p, board: newBoard(n), points: map[int][]float32{}, last: make([]*answerRec, n),
+		ruledOut: make([]uint16, n)}
 }
 
 // NewDaily starts the daily puzzle p for date ("2006-01-02").
@@ -358,14 +363,38 @@ func (g *Game) Hint(reveal bool) (kakuro.Step, bool) {
 	if g.Solved() {
 		return kakuro.Step{}, false
 	}
-	st, ok := kakuro.NextStep(g.puzzle, slices.Clone(g.entries), slices.Clone(g.candidates))
+	st, ok := kakuro.NextStep(g.puzzle, slices.Clone(g.entries), g.hintCandidates())
 	if !ok {
 		st = g.fallbackStep()
 	}
 	if reveal {
 		g.hints++
+		for _, e := range st.Eliminations {
+			if g.validCell(e.Cell) {
+				g.ruledOut[e.Cell] |= 1 << (e.Digit - 1)
+			}
+		}
 	}
 	return st, true
+}
+
+// hintCandidates is the player's pencil marks minus what revealed hints ruled
+// out. A cell with marks never drops to 0 (NextStep's "no marks"), so marks
+// that leave out the answer are still reported as a mistake.
+func (g *Game) hintCandidates() []uint16 {
+	const all = 1<<9 - 1
+	out := make([]uint16, len(g.candidates))
+	for c, marks := range g.candidates {
+		if marks == 0 {
+			marks = all
+		}
+		if m := marks &^ g.ruledOut[c]; m != 0 {
+			out[c] = m
+		} else if g.candidates[c] != 0 {
+			out[c] = g.candidates[c]
+		}
+	}
+	return out
 }
 
 // fallbackStep is a Mistake naming the wrong entries, else a Reveal of the

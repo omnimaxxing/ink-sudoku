@@ -468,3 +468,76 @@ func TestSharedSamples(t *testing.T) {
 		t.Fatalf("shared log changed: %q", b)
 	}
 }
+
+// eliminationGame plays solution digits until the next hint is an
+// elimination step, so it can't change the board on its own.
+func eliminationGame(t *testing.T) (*Game, engine.Step) {
+	t.Helper()
+	for seed := uint64(1); seed < 200; seed++ {
+		g := New(engine.Generate(seed, engine.Hard))
+		for {
+			st, ok := g.Hint(false)
+			if !ok {
+				break
+			}
+			if st.Placement == nil && len(st.Eliminations) > 0 {
+				return g, st
+			}
+			if st.Placement == nil {
+				break // a reveal or mistake: try another puzzle
+			}
+			g.SetCell(st.Placement.Cell, int(st.Placement.Digit), t0)
+		}
+	}
+	t.Fatal("no puzzle reached an elimination step")
+	return nil, engine.Step{}
+}
+
+func sameStep(a, b engine.Step) bool {
+	return a.Title == b.Title && reflect.DeepEqual(a.Eliminations, b.Eliminations)
+}
+
+func TestRevealedEliminationsAreKept(t *testing.T) {
+	g, first := eliminationGame(t)
+	// Without the game keeping it, the board alone gives the same step again.
+	if again, _ := engine.NextStep(g.givens, g.entries, g.candidates); !sameStep(again, first) {
+		t.Fatal("setup: the board alone should repeat the step")
+	}
+	if nudge, _ := g.Hint(false); !sameStep(nudge, first) {
+		t.Fatal("a nudge must not consume the step")
+	}
+	g.Hint(true)
+	next, ok := g.Hint(false)
+	if !ok || sameStep(next, first) {
+		t.Fatalf("after revealing %q the next hint repeated it", first.Title)
+	}
+
+	st := Store{Dir: t.TempDir()}
+	if err := st.Save(g, t0); err != nil {
+		t.Fatal(err)
+	}
+	h, err := st.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if h.ruledOut != g.ruledOut {
+		t.Fatal("ruledOut lost in save/load")
+	}
+	if loaded, _ := h.Hint(false); !sameStep(loaded, next) {
+		t.Fatal("a reloaded game gives a different next hint")
+	}
+}
+
+func TestRuledOutKeepsNoteMistakes(t *testing.T) {
+	g, first := eliminationGame(t)
+	g.Hint(true)
+	e := first.Eliminations[0]
+	// Notes holding only the ruled-out digit leave out the answer: still a mistake.
+	if _, err := g.ToggleCandidate(e.Cell, int(e.Digit), t0); err != nil {
+		t.Fatal(err)
+	}
+	st, ok := g.Hint(false)
+	if !ok || st.Technique != engine.Mistake {
+		t.Fatalf("got %v %q, want a Mistake for the notes in cell %d", st.Technique, st.Title, e.Cell)
+	}
+}
