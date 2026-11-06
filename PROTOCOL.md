@@ -136,7 +136,7 @@ Decisions the QML side (`app/`) made where the above is silent:
 - **No ink, still shown.** An entry with no `answer` ink, or candidates in a cell with no `candidate`
   ink (`setCell`/`toggleCandidate`), are typeset in italic as a stand-in.
 - **Conflicts**: every listed cell gets the marker, givens included.
-- **Finished grid** (v5.2): while `solved`, the grid shows answers only. The counted-answer dots,
+- **Finished grid** (v5.3): while `solved`, the grid shows answers only. The counted-answer dots,
   typeset candidates and pencil-mark or unread ink are hidden (kept in the game, not erased), Hint
   and Undo leave the foot, and the note under the grid says how long it took and with how many
   mistakes and hints (a daily also names its date).
@@ -229,7 +229,7 @@ Decisions the Go side (`backend/cmd/sudoku`, `backend/game`) made where the abov
 - **`conflicts`** lists entered cells only (never givens) whose digit repeats in a peer, given or
   entered.
 - **`puzzle.number` = `seed`**, drawn from 1–999999. `newGame` also accepts an optional `"seed"`.
-  Since v5.2 new numbers use only the digits 1–9 (111111–999999), so any number can be written
+  Since v5.3 new numbers use only the digits 1–9 (111111–999999), so any number can be written
   back in: the recognizer has no 0. `engine/generate_test.go` pins numbers to their puzzles.
 - **`solved`** follows the `state`/`marks` reply of the change that completes the board.
   `mistakes` counts entries set to a digit that isn't the solution's; `hints` counts `hint`s
@@ -307,7 +307,7 @@ New messages; everything above still holds.
 | 110 | f→b | `calibrationInk` | `{"id": 9, "digit": 5, "size": 260, "strokes": [[x, y, t, p, …]]}` → `calibrationRead`. Strokes in box-local px; `size` is the square writing box's side |
 | 111 | f→b | `calibrationDone` | `{}` → `personalized`, then the normal `state` |
 
-**Play by number (v5.2).** The New game list has a "Puzzle No." row of six boxes; the player
+**Play by number (v5.3).** The New game list has a "Puzzle No." row of six boxes; the player
 writes one digit per box, then taps a level.
 
 | Type | Dir | Name | Body |
