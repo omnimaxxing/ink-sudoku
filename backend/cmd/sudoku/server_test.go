@@ -481,3 +481,26 @@ func TestPlayByNumber(t *testing.T) {
 		h.call(msgNewGame, bad, msgError)
 	}
 }
+
+// The number boxes read with the real recognizer: digits at full size and
+// at pencil-mark size, and a scratch-out clears.
+func TestReadInkRealModel(t *testing.T) {
+	h := newHarness(t, t.TempDir())
+	h.s.analyzer = hwr.Analyzer{Classifier: h.s.model, Config: hwr.DefaultConfig()}
+	const box = 110.0
+	read := func(id int, strokes [][]float64) map[string]any {
+		b, _ := json.Marshal(map[string]any{"id": id, "size": box, "strokes": strokes})
+		return h.call(msgReadInk, string(b), msgInkRead)[0]
+	}
+	for d := 1; d <= 9; d++ {
+		for _, size := range []float64{0.6, 0.35} {
+			if r := read(d, glyph(d, box*0.5, box*0.5, box*size)); r["digit"] != float64(d) {
+				t.Errorf("%d at %.0f%% of the box read as %v", d, size*100, r["digit"])
+			}
+		}
+	}
+	scratch := append(glyph(4, box*0.5, box*0.5, box*0.6), zigzag(10, 30, 100, 80, 5))
+	if r := read(20, scratch); r["scratch"] != true || r["digit"] != 0.0 {
+		t.Errorf("scratch-out: %v", r)
+	}
+}
